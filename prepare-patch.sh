@@ -154,10 +154,67 @@ then
     fi
 fi
 
+
+########################################################################
+msg "Looking for potential reviewers..."
+# Based on Alek Storm's script:
+# https://gist.github.com/alekstorm/4949628
+
+function createBlameParts {
+    awk -v commit="$BASE_HASH" '{
+        if ($1 == "@@") {
+            sub(",", ",+", $2)
+            # -MC: Detect moved/copied lines across files
+            # -w : Ignore whitespace changes
+            # -L : Range
+            print "git blame --line-porcelain -MCw -L " substr($2,2) " " commit
+        }
+        else
+            print "-- " substr($3,3)
+    }'
+}
+
+function concatBlameParts {
+    awk '{
+        if (match($0, /^--/) == 1)
+            file=$0
+        else
+            print $0 " " file
+    }'
+}
+
+function execBlame {
+    while read COMMAND; do
+        $COMMAND | sed -n "s/^author-mail <\([^>]*\)>$/\1/p"
+    done
+}
+
+RECENT_CONTRIBUTORS=$(
+    git log --all --since="52 weeks ago" --pretty=format:%ae |
+        sort |
+        uniq |
+        grep -v $EMAIL |
+        awk '{printf "-e %s ",$0}'
+)
+
+REVIEWERS=$(
+    git diff --diff-filter=DM "$BASE_HASH..$HEAD_HASH" |
+        egrep '^@|^diff' |
+        createBlameParts |
+        concatBlameParts |
+        execBlame |
+        sort |
+        uniq -c |
+        sort -nr |
+        grep $RECENT_CONTRIBUTORS |
+        head -n 5 |
+        awk '{printf "--cc="$2" ",$0}'
+)
+
+
 ########################################################################
 $(git config core.editor) $PATCH_DIR &
 
 echo ""
 echo "Send patch with:"
-echo "git push origin $TAG_NAME && git send-email $PATCH_DIR/* --to=git@vger.kernel.org --cc=XXX --in-reply-to="
-
+echo "git push origin $TAG_NAME && git send-email $PATCH_DIR/* --to=git@vger.kernel.org $REVIEWERS --in-reply-to="
