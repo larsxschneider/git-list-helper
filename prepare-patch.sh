@@ -62,8 +62,9 @@ fi
 TAG_NAME="$TOPIC_NAME-v$PATCH_VERSION"
 git tag --force $TAG_NAME
 
+
 ########################################################################
-msg "Checking patches..."
+msg "Checking commits..."
 
 set +e
 git --no-pager diff --check $BASE_HASH...$HEAD_HASH
@@ -93,9 +94,11 @@ if [ "$NON_ASCII" != "" ]; then
     warning "---$NON_ASCII---"
 fi
 
+
 ########################################################################
 msg "Compiling patches..."
 # git rebase $BASE_HASH -x 'make --quiet -j8;'
+
 
 ########################################################################
 msg "Generating patches..."
