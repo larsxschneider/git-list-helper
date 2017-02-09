@@ -192,12 +192,11 @@ function execBlame {
     done
 }
 
-RECENT_CONTRIBUTORS=$(
+ELEVATE_RECENT_CONTRIBUTORS=$(
     git log --all --since="52 weeks ago" --pretty=format:%ae |
         sort |
         uniq |
-        grep -v $EMAIL |
-        awk '{printf "-e %s ",$0}'
+        awk '{printf "-e /%s/s/^[[:space:]]*/9999999/ ",$0}'
 )
 
 REVIEWERS=$(
@@ -208,8 +207,9 @@ REVIEWERS=$(
         execBlame |
         sort |
         uniq -c |
+        grep -v $EMAIL |
+        sed $ELEVATE_RECENT_CONTRIBUTORS |
         sort -nr |
-        grep $RECENT_CONTRIBUTORS |
         head -n 5 |
         awk '{printf "--cc="$2" ",$0}'
 )
