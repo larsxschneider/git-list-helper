@@ -103,7 +103,7 @@ msg "Compiling patches..."
 ########################################################################
 msg "Generating patches..."
 
-FORMAT_PATCH_FLAGS="--quiet --notes --find-renames --reroll-count=$PATCH_VERSION"
+FORMAT_PATCH_FLAGS="--quiet --notes --find-renames --reroll-count=$PATCH_VERSION --base=$BASE_HASH"
 COMMIT_COUNT=$(git --no-pager rev-list $BASE_HASH...$HEAD_HASH --count)
 
 if [ $COMMIT_COUNT -eq "1" ]
