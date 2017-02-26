@@ -115,9 +115,9 @@ then
     # fi
 
     git notes add -f -F- <<EOF
-Base Commit: ${BASE_HASH:0:10} ($BASE_REF)
-Diff on Web: https://github.com/larsxschneider/git/commit/${HEAD_HASH:0:10}
-Checkout:    git fetch https://github.com/larsxschneider/git $TAG_NAME && git checkout ${HEAD_HASH:0:10}
+Base Ref: $BASE_REF
+Web-Diff: https://github.com/larsxschneider/git/commit/${HEAD_HASH:0:10}
+Checkout: git fetch https://github.com/larsxschneider/git $TAG_NAME && git checkout ${HEAD_HASH:0:10}
 
 EOF
     if [ $PATCH_VERSION -ge 2 ]; then
