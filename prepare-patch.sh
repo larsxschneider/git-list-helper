@@ -27,6 +27,7 @@ EMAIL=TODO@gmail.com
 UPSTREAM_REMOTE=upstream
 DEFAULT_UPSTREAM_BRANCH=maint
 PATCH_TEMP_DIR=~/temp/patches
+INTERDIFF="$PATCH_TEMP_DIR/interdiff.tmp"
 
 function msg () {
     echo -e "$(tput setaf 2)$1$(tput sgr 0)\n"
@@ -106,28 +107,33 @@ msg "Generating patches..."
 FORMAT_PATCH_FLAGS="--quiet --notes --find-renames --reroll-count=$PATCH_VERSION --base=$BASE_HASH"
 COMMIT_COUNT=$(git --no-pager rev-list $BASE_HASH...$HEAD_HASH --count)
 
-if [ $COMMIT_COUNT -eq "1" ]
-then
-    BASE_REF=$(git tag --points-at $BASE_HASH)
-    # if [ -z $BASE_REF ]
-    # then
-    #     BASE_REF=${BASE_BRANCH#$UPSTREAM_REMOTE/}
-    # fi
-
-    git notes add -f -F- <<EOF
+BASE_REF=$(git tag --points-at $BASE_HASH)
+test $BASE_REF || BASE_REF=$(git branch -a --contains $BASE_HASH | grep $UPSTREAM_REMOTE | sed 's/.*\///' | head -n1)
+read -r -d '\0' URLS <<EOM
 Base Ref: $BASE_REF
 Web-Diff: https://github.com/larsxschneider/git/commit/${HEAD_HASH:0:10}
 Checkout: git fetch https://github.com/larsxschneider/git $TAG_NAME && git checkout ${HEAD_HASH:0:10}
 
-EOF
-    if [ $PATCH_VERSION -ge 2 ]; then
-        git notes append -F- <<EOF
+\0
+EOM
+
+    if [ $PATCH_VERSION -ge 2 ]
+    then
+        # The interdiff can contain "\" which causes problems in BASH
+        # variables. I assume it would need to be escaped somehow...
+        cat <<EOM > "$INTERDIFF"
 Interdiff (v$LAST_PATCH_VERSION..v$PATCH_VERSION):
 
-$(git diff -w $LAST_TAG_HASH $HEAD_HASH)
+$(git --no-pager diff -w $LAST_TAG_HASH $HEAD_HASH)
 
-EOF
+\0
+EOM
     fi
+
+if [ $COMMIT_COUNT -eq "1" ]
+then
+    git notes add -f --message="$URLS"
+    ! [ -e "$INTERDIFF" ] || git notes append -F "$INTERDIFF"
 else
     FORMAT_PATCH_FLAGS="$FORMAT_PATCH_FLAGS --cover-letter"
 fi
@@ -140,23 +146,17 @@ git format-patch $FORMAT_PATCH_FLAGS $BASE_HASH --output-directory $PATCH_DIR/
 
 if [ $COMMIT_COUNT -ne "1" ]
 then
-    COVER_LETTER="$PATCH_DIR/0000-cover-letter.patch"
-    sed -i -e '/^Subject:/{:1;N;/[^\n]$/b1;N;N;N;N;s/^\([^]]*\] \)\*\*\* [^\n]*\(.*\)\n\n\*\*\*[^\n]*\n\n\(.*\)\n$/\1\3\2\n/;:2;n;b2}' "$COVER_LETTER"
-    sed -i 's|^//|##|g' "$COVER_LETTER"
-    sed -i 's|^///|###|g' "$COVER_LETTER"
-    sed -i "s|LAST_PATCH_VERSION|$LAST_PATCH_VERSION|g" "$COVER_LETTER"
-    if [ -n "$LAST_PATCH_VERSION" ]
-    then
-        split -p ^-- "$COVER_LETTER" "$COVER_LETTER-split-"
-        cat "$COVER_LETTER-split-aa" > "$COVER_LETTER"
-        printf "\n\n## Interdiff ($LAST_PATCH_VERSION..$PATCH_VERSION)\n\n" >> "$COVER_LETTER"
-        git diff -w $TOPIC_NAME/$LAST_PATCH_VERSION $HEAD_HASH >> "$COVER_LETTER"
-        printf "\n" >> "$COVER_LETTER"
-        cat "$COVER_LETTER-split-ab" >> "$COVER_LETTER"
-        rm "$COVER_LETTER-split-aa" "$COVER_LETTER-split-ab"
-    fi
+    COVER_LETTER="$PATCH_DIR/v$PATCH_VERSION-0000-cover-letter.patch"
+    split -p 'BLURB HERE' "$COVER_LETTER"
+    cat xaa > $COVER_LETTER
+    rm xaa
+    printf "$URLS\n" >> $COVER_LETTER
+    ! [ -e "$INTERDIFF" ] || cat "$INTERDIFF" >> $COVER_LETTER
+    tail -n +2 xab >> $COVER_LETTER
+    rm xab
 fi
 
+! [ -e "$INTERDIFF" ] || rm "$INTERDIFF"
 
 ########################################################################
 msg "Looking for potential reviewers..."
