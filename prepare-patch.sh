@@ -122,11 +122,14 @@ EOM
         # The interdiff can contain "\" which causes problems in BASH
         # variables. I assume it would need to be escaped somehow...
         cat <<EOM > "$INTERDIFF"
-Interdiff (v$LAST_PATCH_VERSION..v$PATCH_VERSION):
+
+
+### Interdiff (v$LAST_PATCH_VERSION..v$PATCH_VERSION):
 
 $(git --no-pager diff -w $LAST_TAG_HASH $HEAD_HASH)
 
-\0
+
+### Patches
 EOM
     fi
 
