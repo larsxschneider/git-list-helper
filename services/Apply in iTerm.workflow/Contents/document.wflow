@@ -51,7 +51,7 @@
 				<key>ActionParameters</key>
 				<dict>
 					<key>source</key>
-					<string>tell application "Mail"    set selectionMessage to selection    set theMessage to item 1 of selectionMessage    set messageId to content of header "Message-ID" of ¬        theMessage as stringend tellset messageId to ¬    do shell script "echo '" &amp; messageId &amp; ¬        "' | sed 's/^.*&lt;//' | sed 's/&gt;$//'"tell application "iTerm2"  tell current session of current window    write text "PATCH=$(curl --silent http://public-inbox.org/git/" &amp; messageId &amp; "/raw); ((echo $PATCH | git am --quiet) || (git am --abort; echo $PATCH | git apply)) &amp;&amp; echo &amp;&amp; echo \"Applied $(echo $PATCH | grep '^Subject:')\""  end tellend tell</string>
+					<string>tell application "Mail"    set selectionMessage to selection    set theMessage to item 1 of selectionMessage    set messageId to content of header "Message-ID" of ¬        theMessage as stringend tellset messageId to ¬    do shell script "echo '" &amp; messageId &amp; ¬        "' | sed 's/^.*&lt;//' | sed 's/&gt;$//'"tell application "iTerm2"  tell current session of current window    write text "PATCH=$(curl --silent http://public-inbox.org/git/" &amp; messageId &amp; "/raw); ((printf \"%s\" \"$PATCH\" | git am --quiet) || (git am --abort; echo $PATCH | git apply)) &amp;&amp; echo &amp;&amp; echo \"Applied $(echo $PATCH | grep '^Subject:')\""  end tellend tell</string>
 				</dict>
 				<key>BundleIdentifier</key>
 				<string>com.apple.Automator.RunScript</string>
